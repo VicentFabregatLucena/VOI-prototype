@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voi Edinburgh — Destination-First & Inclusive Parking Prototype v2 (CW2)</title>
+<style>
+  :root {
+    --voi-coral: #F46C63;
+    --voi-dark: #16181D;
+    --voi-teal: #0D9488;
+    --voi-teal-light: #CCFBF1;
+    --voi-green: #16A34A;
+    --voi-red: #DC2626;
+    --voi-blue: #2563EB;
+    --bg: #F1F5F9;
+    --card: #FFFFFF;
+    --muted: #64748B;
+    --border: #E2E8F0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  body {
+    background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    gap: 32px;
+    flex-wrap: wrap;
+    color: #0F172A;
+  }
+
+  /* Left Demo Control Panel */
+  .demo-panel {
+    width: 330px;
+    background: rgba(255,255,255,0.96);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  }
+  .demo-badge {
+    display: inline-block;
+    background: #FEE2E2;
+    color: #B91C1C;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .demo-panel h1 { font-size: 20px; line-height: 1.25; margin-bottom: 8px; color: var(--voi-dark); }
+  .demo-panel p { font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 16px; }
+  .step-list { list-style: none; display: flex; flex-direction: column; gap: 7px; margin-bottom: 18px; }
+  .step-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 10px; font-size: 12.5px;
+    background: #F8FAFC; border: 1px solid var(--border); cursor: pointer; transition: all 0.2s;
+  }
+  .step-item:hover { background: #F1F5F9; }
+  .step-item.active { background: #CCFBF1; border-color: var(--voi-teal); font-weight: 600; color: #0F766E; }
+  .step-num {
+    width: 22px; height: 22px; border-radius: 50%; background: #E2E8F0; color: #334155;
+    display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0;
+  }
+  .step-item.active .step-num { background: var(--voi-teal); color: white; }
+  .reset-btn {
+    width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border);
+    background: white; color: #334155; font-weight: 600; font-size: 13px; cursor: pointer; transition: 0.2s;
+  }
+  .reset-btn:hover { background: #F8FAFC; border-color: #CBD5E1; }
+
+  /* Phone Frame */
+  .phone {
+    width: 390px;
+    height: 812px;
+    background: #E2E8F0;
+    border-radius: 44px;
+    border: 10px solid #0F172A;
+    box-shadow: 0 28px 60px rgba(0,0,0,0.45);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .status-bar {
+    height: 38px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 22px;
+    font-size: 12px;
+    font-weight: 700;
+    z-index: 30;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+  }
+  .notch {
+    width: 110px; height: 22px; background: #0F172A; border-radius: 0 0 14px 14px;
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%); z-index: 40;
+  }
+
+  /* Map Area */
+  .map-viewport {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #EAECEF;
+  }
+  #edinburgh-map {
+    width: 100%;
+    height: 100%;
+    transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+    transform-origin: center center;
+  }
+
+  /* Top Search Bar */
+  .top-overlay {
+    position: absolute;
+    top: 12px; left: 14px; right: 14px;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .search-box {
+    background: white;
+    border-radius: 16px;
+    padding: 12px 14px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: 0.2s;
+  }
+  .search-box:hover { border-color: var(--voi-coral); }
+  .search-input {
+    border: none; outline: none; flex: 1; font-size: 14px; font-weight: 600; color: var(--voi-dark);
+    background: transparent; cursor: pointer;
+  }
+  .search-input::placeholder { color: #64748B; font-weight: 500; }
+  .voi-pill {
+    background: var(--voi-coral); color: white; font-size: 11px; font-weight: 800;
+    padding: 4px 8px; border-radius: 8px;
+  }
+
+  /* Overview Top Header */
+  .overview-header {
+    background: rgba(15, 23, 42, 0.92);
+    color: white;
+    border-radius: 14px;
+    padding: 10px 14px;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.22);
+  }
+  .overview-header.show { display: flex; }
+  .ov-title { font-size: 13px; font-weight: 800; }
+  .ov-sub { font-size: 11px; color: #CBD5E1; margin-top: 1px; }
+  .ov-back {
+    background: rgba(255,255,255,0.16); color: white; border: none; border-radius: 8px;
+    padding: 5px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer;
+  }
+
+  /* Search Dropdown */
+  .search-dropdown {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.16);
+    overflow: hidden;
+    display: none;
+  }
+  .search-dropdown.show { display: block; }
+  .dest-option {
+    padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid #F1F5F9;
+    cursor: pointer; transition: 0.15s;
+  }
+  .dest-option:last-child { border-bottom: none; }
+  .dest-option:hover { background: #F8FAFC; }
+  .dest-icon {
+    width: 34px; height: 34px; border-radius: 10px; background: #F1F5F9;
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .dest-option.recommended .dest-icon { background: #CCFBF1; }
+  .dest-title { font-size: 13.5px; font-weight: 700; color: var(--voi-dark); }
+  .dest-sub { font-size: 11.5px; color: var(--muted); }
+
+  /* Turn-by-Turn Navigation Banner */
+  .nav-banner {
+    background: #0F766E;
+    color: white;
+    border-radius: 16px;
+    padding: 14px 16px;
+    box-shadow: 0 8px 24px rgba(15, 118, 110, 0.35);
+    display: none;
+    align-items: center;
+    gap: 14px;
+  }
+  .nav-banner.show { display: flex; }
+  .nav-banner.arrived { background: #15803D; }
+  .nav-arrow {
+    width: 42px; height: 42px; border-radius: 12px; background: rgba(255,255,255,0.18);
+    display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+  }
+  .nav-dist { font-size: 18px; font-weight: 800; line-height: 1.1; }
+  .nav-street { font-size: 12.5px; opacity: 0.92; margin-top: 2px; }
+
+  /* Legend Pill */
+  .map-legend {
+    position: absolute;
+    right: 12px; top: 82px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(6px);
+    padding: 8px 10px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    font-size: 10.5px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    z-index: 15;
+  }
+  .legend-row { display: flex; align-items: center; gap: 6px; font-weight: 600; color: #334155; }
+  .dot-bike { width: 10px; height: 10px; border-radius: 50%; background: var(--voi-coral); }
+  .sq-park { width: 10px; height: 10px; border-radius: 3px; background: var(--voi-teal); }
+  .box-allow { width: 12px; height: 10px; border-radius: 2px; background: repeating-linear-gradient(45deg, #86EFAC, #86EFAC 2px, #DCFCE7 2px, #DCFCE7 4px); border: 1px solid #16A34A; }
+  .box-no { width: 12px; height: 10px; border-radius: 2px; background: repeating-linear-gradient(-45deg, #FCA5A5, #FCA5A5 2px, #FEE2E2 2px, #FEE2E2 4px); border: 1px solid #DC2626; }
+
+  /* Bottom Sheets */
+  .bottom-sheet {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: white;
+    border-radius: 24px 24px 0 0;
+    padding: 14px 18px 22px;
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.14);
+    z-index: 25;
+    display: none;
+    animation: slideUp 0.28s ease-out;
+  }
+  .bottom-sheet.show { display: block; }
+  @keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .drag-handle {
+    width: 40px; height: 4px; background: #CBD5E1; border-radius: 99px; margin: 0 auto 12px;
+  }
+
+  .sheet-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .sheet-title { font-size: 16px; font-weight: 800; color: var(--voi-dark); }
+  .sheet-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .close-mini {
+    background: #F1F5F9; border: none; width: 28px; height: 28px; border-radius: 50%;
+    font-size: 14px; cursor: pointer; color: #475569; font-weight: 700;
+  }
+
+  /* 2-Column Mode Compare (Voi E-Bike vs Walk Only) */
+  .compare-bar {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;
+  }
+  .mode-chip {
+    border: 1.5px solid var(--border); border-radius: 12px; padding: 10px 8px; text-align: center;
+    cursor: pointer; transition: 0.2s;
+  }
+  .mode-chip.selected {
+    border-color: var(--voi-teal); background: #F0FDFA;
+  }
+  .mode-name { font-size: 12px; color: var(--muted); font-weight: 700; }
+  .mode-chip.selected .mode-name { color: #0F766E; }
+  .mode-time { font-size: 17px; font-weight: 800; color: var(--voi-dark); margin-top: 2px; }
+  .mode-tag { font-size: 10px; font-weight: 700; color: var(--voi-green); text-transform: uppercase; margin-top: 2px; }
+  .mode-sub { font-size: 10px; color: #64748B; margin-top: 2px; }
+
+  .legs-box {
+    background: #F8FAFC; border: 1px solid var(--border); border-radius: 14px;
+    padding: 10px 12px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .leg-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+  .leg-badge {
+    padding: 3px 7px; border-radius: 6px; font-size: 11px; font-weight: 700; width: 58px; text-align: center; flex-shrink: 0;
+  }
+  .leg-walk { background: #E2E8F0; color: #334155; }
+  .leg-ride { background: #CCFBF1; color: #0F766E; }
+  .leg-text { color: #1E293B; font-weight: 500; flex: 1; }
+  .leg-text strong { font-weight: 700; }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 8px; }
+  .btn-primary {
+    flex: 1; background: var(--voi-coral); color: white; border: none; border-radius: 14px;
+    padding: 13px 14px; font-size: 13.5px; font-weight: 700; cursor: pointer; transition: 0.2s;
+  }
+  .btn-primary:hover { background: #E15B52; }
+  .btn-teal {
+    flex: 1; background: var(--voi-teal); color: white; border: none; border-radius: 14px;
+    padding: 13px 14px; font-size: 13.5px; font-weight: 700; cursor: pointer; transition: 0.2s;
+  }
+  .btn-teal:hover { background: #0F766E; }
+  .btn-secondary {
+    background: #F1F5F9; color: #0F172A; border: 1px solid #CBD5E1; border-radius: 14px;
+    padding: 12px 12px; font-size: 12.5px; font-weight: 700; cursor: pointer; transition: 0.2s;
+  }
+  .btn-secondary:hover { background: #E2E8F0; }
+
+  /* Parking Bay & Rules Card */
+  .bay-photo {
+    width: 100%; height: 96px; border-radius: 12px; background: linear-gradient(180deg, #DBEAFE 0%, #E2E8F0 55%, #CBD5E1 100%);
+    border: 1px solid var(--border); margin-bottom: 10px; position: relative; overflow: hidden;
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .photo-tag {
+    position: absolute; top: 8px; left: 8px; background: rgba(15,23,42,0.78); color: white;
+    font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+  }
+  .capacity-tag {
+    position: absolute; top: 8px; right: 8px; background: #DCFCE7; color: #166534;
+    font-size: 10.5px; font-weight: 800; padding: 3px 8px; border-radius: 6px; border: 1px solid #86EFAC;
+  }
+  .rules-box {
+    background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px; padding: 10px 12px; margin-bottom: 12px;
+  }
+  .rules-title { font-size: 12px; font-weight: 800; color: #92400E; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .rules-list { list-style: none; font-size: 11.5px; color: #78350F; display: flex; flex-direction: column; gap: 3px; }
+
+  /* Navigation Bottom Card */
+  .nav-metrics {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
+  }
+  .nav-eta { font-size: 20px; font-weight: 800; color: #0F766E; }
+  .nav-sub { font-size: 12px; color: var(--muted); }
+  .progress-track {
+    width: 100%; height: 6px; background: #E2E8F0; border-radius: 99px; overflow: hidden; margin-bottom: 12px;
+  }
+  .progress-fill {
+    height: 100%; background: var(--voi-teal); width: 10%; transition: width 0.5s ease;
+  }
+
+  .clickable-pin { cursor: pointer; }
+  .pulse-ring { animation: pulse 1.8s infinite; transform-origin: center; }
+  @keyframes pulse {
+    0% { opacity: 0.7; r: 10; }
+    100% { opacity: 0; r: 22; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Left Demo Control Panel -->
+<div class="demo-panel">
+  <span class="demo-badge">HCI CW2 Interactive Prototype</span>
+  <h1>Voi Edinburgh: Destination-First &amp; Inclusive Parking</h1>
+  <p>Combines <strong>Sketch 1</strong> (destination-led multimodal planner, bike vs. walk decision &amp; full-route map overview) and <strong>Sketch 2</strong> (inclusive hatched parking zones, street photo &amp; rules card).</p>
+  <ul class="step-list">
+    <li class="step-item active" id="step-1" onclick="goToState('home')"><span class="step-num">1</span> Home Map &amp; "Where to?"</li>
+    <li class="step-item" id="step-2" onclick="goToState('search')"><span class="step-num">2</span> Search King's Buildings</li>
+    <li class="step-item" id="step-3" onclick="goToState('planner')"><span class="step-num">3</span> Voi Bike vs. Walk Decision</li>
+    <li class="step-item" id="step-4" onclick="goToState('overview')"><span class="step-num">4</span> Full Route Map Overview</li>
+    <li class="step-item" id="step-5" onclick="goToState('bay')"><span class="step-num">5</span> Inspect "P" Bay &amp; Rules Card</li>
+    <li class="step-item" id="step-6" onclick="goToState('nav')"><span class="step-num">6</span> Follow Route (Google Maps)</li>
+    <li class="step-item" id="step-7" onclick="goToState('arrived')"><span class="step-num">7</span> Compliant Drop-Off Confirmed</li>
+  </ul>
+  <button class="reset-btn" onclick="goToState('home')">↺ Reset Prototype</button>
+</div>
+
+<!-- Mobile Phone Prototype -->
+<div class="phone">
+  <div class="notch"></div>
+  <div class="status-bar">
+    <span>12:15</span>
+    <span>5G • 88%</span>
+  </div>
+
+  <div class="map-viewport">
+    <!-- Top Overlay -->
+    <div class="top-overlay">
+      <div class="search-box" id="search-box" onclick="goToState('search')">
+        <span>🔍</span>
+        <input type="text" class="search-input" id="search-input" placeholder="Where to in Edinburgh?" readonly>
+        <span class="voi-pill">VOI</span>
+      </div>
+
+      <!-- Full Route Overview Header -->
+      <div class="overview-header" id="overview-header">
+        <div>
+          <div class="ov-title">Full Route Overview (15 min)</div>
+          <div class="ov-sub">George Sq → Bike #08 → Bay P → Nucleus</div>
+        </div>
+        <button class="ov-back" onclick="goToState('planner')">← Back</button>
+      </div>
+
+      <div class="search-dropdown" id="search-dropdown">
+        <div class="dest-option recommended" onclick="goToState('planner')">
+          <div class="dest-icon">🏛️</div>
+          <div>
+            <div class="dest-title">King's Buildings (Nucleus)</div>
+            <div class="dest-sub">University of Edinburgh • 2.4 km south</div>
+          </div>
+        </div>
+        <div class="dest-option" onclick="goToState('planner')">
+          <div class="dest-icon">📚</div>
+          <div>
+            <div class="dest-title">KB Main Gate — Engineering Lab</div>
+            <div class="dest-sub">Mayfield Rd • Legal Bay 2 min away</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-banner" id="nav-banner">
+        <div class="nav-arrow" id="nav-arrow">↓</div>
+        <div>
+          <div class="nav-dist" id="nav-dist">450 m</div>
+          <div class="nav-street" id="nav-street">Head south on Middle Meadow Walk</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Inclusive Map Legend -->
+    <div class="map-legend" id="map-legend">
+      <div class="legend-row"><span class="dot-bike"></span> Available Bike</div>
+      <div class="legend-row"><span class="sq-park"></span> Legal Bay (P)</div>
+      <div class="legend-row"><span class="box-allow"></span> Parking Area</div>
+      <div class="legend-row"><span class="box-no"></span> No Parking</div>
+    </div>
+
+    <!-- Edinburgh Vector Map -->
+    <svg id="edinburgh-map" viewBox="0 0 390 774" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="hatch-green" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+          <rect width="8" height="8" fill="#DCFCE7" fill-opacity="0.75"/>
+          <line x1="0" y1="0" x2="0" y2="8" stroke="#16A34A" stroke-width="2" stroke-opacity="0.65"/>
+        </pattern>
+        <pattern id="hatch-red" width="8" height="8" patternUnits="userSpaceOnUse">
+          <rect width="8" height="8" fill="#FEE2E2" fill-opacity="0.78"/>
+          <path d="M0,0 L8,8 M8,0 L0,8" stroke="#DC2626" stroke-width="1.3" stroke-opacity="0.55"/>
+        </pattern>
+      </defs>
+
+      <!-- Base map -->
+      <rect width="390" height="774" fill="#F1F5F9"/>
+      <path d="M 15 205 Q 190 190 365 215 L 350 285 Q 190 270 25 280 Z" fill="#D1FAE5" stroke="#A7F3D0" stroke-width="1.5"/>
+      <text x="195" y="246" font-size="11" font-weight="700" fill="#047857" text-anchor="middle" opacity="0.7">THE MEADOWS</text>
+
+      <!-- Roads -->
+      <g stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <path d="M 70 110 L 320 110" stroke-width="12"/>
+        <path d="M 140 80 L 140 280 L 210 430 L 210 640" stroke-width="14"/>
+        <path d="M 270 110 L 270 360 L 210 430" stroke-width="10"/>
+        <path d="M 40 360 L 350 360" stroke-width="10"/>
+        <path d="M 60 510 L 340 510" stroke-width="12"/>
+        <path d="M 210 510 L 290 590" stroke-width="10"/>
+      </g>
+      <text x="195" y="106" font-size="9.5" font-weight="700" fill="#64748B">GEORGE SQUARE</text>
+      <text x="148" y="340" font-size="9" font-weight="600" fill="#64748B" transform="rotate(64 148 340)">MIDDLE MEADOW WALK</text>
+      <text x="218" y="475" font-size="9.5" font-weight="700" fill="#64748B">MAYFIELD RD</text>
+      <text x="285" y="555" font-size="9.5" font-weight="700" fill="#334155" text-anchor="middle">KING'S BUILDINGS</text>
+
+      <!-- Campus Buildings -->
+      <rect x="92" y="122" width="40" height="32" rx="4" fill="#CBD5E1"/>
+      <text x="112" y="142" font-size="8" font-weight="700" fill="#475569" text-anchor="middle">Library</text>
+
+      <rect x="252" y="575" width="66" height="44" rx="6" fill="#CBD5E1" stroke="#94A3B8" stroke-width="1"/>
+      <text x="285" y="600" font-size="9" font-weight="800" fill="#334155" text-anchor="middle">NUCLEUS</text>
+
+      <!-- Inclusive Geofence Zones -->
+      <rect x="115" y="485" width="84" height="58" rx="8" fill="url(#hatch-red)" stroke="#DC2626" stroke-width="1.8" stroke-dasharray="4 2"/>
+      <text x="157" y="518" font-size="8.5" font-weight="800" fill="#991B1B" text-anchor="middle">NO PARKING</text>
+
+      <rect x="202" y="520" width="62" height="54" rx="8" fill="url(#hatch-green)" stroke="#16A34A" stroke-width="2"/>
+      <text x="233" y="568" font-size="8" font-weight="800" fill="#166534" text-anchor="middle">PARKING AREA</text>
+
+      <!-- BIKE ROUTE OVERLAY -->
+      <g id="route-layer" opacity="0" style="transition: opacity 0.35s;">
+        <path d="M 118 158 L 140 176" stroke="#475569" stroke-width="3.5" stroke-dasharray="4 4" fill="none"/>
+        <path d="M 140 176 L 140 280 L 210 430 L 210 510 L 232 540" stroke="#0D9488" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <path d="M 232 540 L 278 582" stroke="#16A34A" stroke-width="3.5" stroke-dasharray="4 4" fill="none"/>
+      </g>
+
+      <!-- WALK-ONLY ROUTE OVERLAY -->
+      <g id="walk-only-layer" opacity="0" style="transition: opacity 0.35s;">
+        <path d="M 118 158 L 140 280 L 210 430 L 210 510 L 278 582" stroke="#475569" stroke-width="4.5" stroke-dasharray="6 5" stroke-linecap="round" fill="none"/>
+      </g>
+
+      <!-- FULL ROUTE OVERVIEW CALLOUT LABELS (Shown clearly in Step 4: Overview) -->
+      <g id="overview-labels" opacity="0" style="transition: opacity 0.35s;">
+        <!-- 1. Your Position -->
+        <rect x="14" y="144" width="90" height="22" rx="6" fill="#1E293B"/>
+        <text x="59" y="159" font-size="9.5" font-weight="700" fill="white" text-anchor="middle">1. You (Start)</text>
+
+        <!-- 2. Pick up Bike -->
+        <rect x="156" y="164" width="134" height="24" rx="6" fill="#F46C63"/>
+        <text x="223" y="180" font-size="9.5" font-weight="800" fill="white" text-anchor="middle">2. Bike #08 (2m walk)</text>
+
+        <!-- 3. Cycle Leg -->
+        <rect x="200" y="330" width="112" height="24" rx="6" fill="#0D9488"/>
+        <text x="256" y="346" font-size="9.5" font-weight="800" fill="white" text-anchor="middle">3. Ride (11 min)</text>
+
+        <!-- 4. Parking Bay -->
+        <rect x="64" y="546" width="134" height="24" rx="6" fill="#16A34A"/>
+        <text x="131" y="562" font-size="9.5" font-weight="800" fill="white" text-anchor="middle">4. Legal Bay P (6 free)</text>
+
+        <!-- 5. Final Destination -->
+        <rect x="234" y="624" width="136" height="24" rx="6" fill="#0F172A"/>
+        <text x="302" y="640" font-size="9.5" font-weight="800" fill="white" text-anchor="middle">5. Nucleus (2m walk)</text>
+      </g>
+
+      <!-- User Current Location -->
+      <circle cx="118" cy="158" r="10" fill="#2563EB" opacity="0.22" class="pulse-ring"/>
+      <circle cx="118" cy="158" r="6" fill="#2563EB" stroke="white" stroke-width="2.5"/>
+
+      <!-- Bike Pins -->
+      <g class="clickable-pin" onclick="goToState('planner')">
+        <circle cx="140" cy="176" r="11" fill="#F46C63" stroke="white" stroke-width="2"/>
+        <text x="140" y="180" font-size="10" fill="white" text-anchor="middle" font-weight="800">🚲</text>
+      </g>
+      <g opacity="0.55">
+        <circle cx="168" cy="166" r="9" fill="#94A3B8" stroke="white" stroke-width="1.5"/>
+        <text x="168" y="169" font-size="8" fill="white" text-anchor="middle" font-weight="800">🔒</text>
+      </g>
+      <circle cx="268" cy="180" r="9" fill="#F46C63" stroke="white" stroke-width="1.8"/>
+
+      <!-- Parking Bay Pin -->
+      <g class="clickable-pin" id="parking-pin" onclick="goToState('bay')">
+        <rect x="219" y="527" width="26" height="26" rx="6" fill="#0D9488" stroke="white" stroke-width="2.5"/>
+        <text x="232" y="545" font-size="14" font-weight="900" fill="white" text-anchor="middle">P</text>
+      </g>
+
+      <!-- Active Rider Marker -->
+      <g id="rider-marker" opacity="0" transform="translate(140, 176)" style="transition: transform 0.8s ease-in-out;">
+        <circle cx="0" cy="0" r="13" fill="#0F766E" stroke="white" stroke-width="3"/>
+        <text x="0" y="4" font-size="11" fill="white" text-anchor="middle" font-weight="800">▲</text>
+      </g>
+    </svg>
+
+    <!-- Bottom Sheet 1: Home -->
+    <div class="bottom-sheet show" id="sheet-home">
+      <div class="drag-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <div class="sheet-title">George Square Hub</div>
+          <div class="sheet-sub">2 bikes available nearby • 1 reserved (greyed out)</div>
+        </div>
+      </div>
+      <p style="font-size:12.5px; color:#475569; margin-bottom:12px;">
+        Tap <strong>"Where to in Edinburgh?"</strong> above to compare Voi vs. walking and check destination parking before unlocking.
+      </p>
+      <button class="btn-primary" style="width:100%;" onclick="goToState('search')">Plan Destination &amp; Parking →</button>
+    </div>
+
+    <!-- Bottom Sheet 2: Voi E-Bike vs Walk Decision (NO BUS) -->
+    <div class="bottom-sheet" id="sheet-planner">
+      <div class="drag-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <div class="sheet-title">To King's Buildings (Nucleus)</div>
+          <div class="sheet-sub">Compare door-to-door time before unlocking</div>
+        </div>
+        <button class="close-mini" onclick="goToState('home')">✕</button>
+      </div>
+
+      <div class="compare-bar">
+        <div class="mode-chip selected" id="chip-bike" onclick="selectMode('bike')">
+          <div class="mode-name">🚲 Voi E-Bike</div>
+          <div class="mode-time">15 min</div>
+          <div class="mode-tag">19 min faster</div>
+        </div>
+        <div class="mode-chip" id="chip-walk" onclick="selectMode('walk')">
+          <div class="mode-name">🚶 Walk Only</div>
+          <div class="mode-time">34 min</div>
+          <div class="mode-sub">2.4 km direct</div>
+        </div>
+      </div>
+
+      <div class="legs-box" id="legs-bike">
+        <div class="leg-row">
+          <span class="leg-badge leg-walk">2 min</span>
+          <span class="leg-text">Walk to <strong>Bike #08</strong> (88% battery)</span>
+        </div>
+        <div class="leg-row">
+          <span class="leg-badge leg-ride">11 min</span>
+          <span class="leg-text">Ride via Middle Meadow Walk to <strong>Bay P</strong></span>
+        </div>
+        <div class="leg-row">
+          <span class="leg-badge leg-walk">2 min</span>
+          <span class="leg-text">Walk from <strong>KB Main Gate Bay</strong> to Nucleus</span>
+        </div>
+      </div>
+
+      <div class="legs-box" id="legs-walk" style="display:none;">
+        <div class="leg-row">
+          <span class="leg-badge leg-walk">34 min</span>
+          <span class="leg-text">Walk directly from <strong>George Sq</strong> to <strong>Nucleus</strong> (no bike needed)</span>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="goToState('bay')">Inspect Bay (P)</button>
+        <button class="btn-primary" id="planner-cta" onclick="goToState('overview')">Preview Full Route →</button>
+      </div>
+    </div>
+
+    <!-- Bottom Sheet 3: Compact Bar for Full Route Overview (Leaves entire map clearly visible!) -->
+    <div class="bottom-sheet" id="sheet-overview" style="padding: 12px 18px 18px;">
+      <div class="drag-handle" style="margin-bottom:8px;"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="font-size:13px; font-weight:800; color:#0F172A;">All 5 waypoints verified on map</div>
+        <div style="font-size:12px; font-weight:700; color:#0D9488;">2m + 11m + 2m</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="goToState('bay')">Inspect Bay (P)</button>
+        <button class="btn-teal" onclick="goToState('nav')">Reserve Bike &amp; Start ▶</button>
+      </div>
+    </div>
+
+    <!-- Bottom Sheet 4: Readable Parking Bay & Rules Card -->
+    <div class="bottom-sheet" id="sheet-bay">
+      <div class="drag-handle"></div>
+      <div class="sheet-header">
+        <div>
+          <div class="sheet-title">KB Main Gate Bay (P)</div>
+          <div class="sheet-sub">2 min walk to Nucleus • Sheffield bike racks</div>
+        </div>
+        <button class="close-mini" onclick="goToState('overview')">✕</button>
+      </div>
+
+      <div class="bay-photo">
+        <span class="photo-tag">📷 Street View: KB Main Gate</span>
+        <span class="capacity-tag">6 / 10 spaces free</span>
+        <svg viewBox="0 0 340 80" width="100%" height="76">
+          <rect x="0" y="55" width="340" height="25" fill="#94A3B8"/>
+          <rect x="45" y="58" width="250" height="16" fill="#DCFCE7" stroke="#16A34A" stroke-width="2" stroke-dasharray="5 3"/>
+          <path d="M 80 66 L 80 42 Q 80 34 88 34 L 106 34 Q 114 34 114 42 L 114 66" stroke="#334155" stroke-width="3.5" fill="none"/>
+          <path d="M 145 66 L 145 42 Q 145 34 153 34 L 171 34 Q 179 34 179 42 L 179 66" stroke="#334155" stroke-width="3.5" fill="none"/>
+          <path d="M 210 66 L 210 42 Q 210 34 218 34 L 236 34 Q 244 34 244 42 L 244 66" stroke="#334155" stroke-width="3.5" fill="none"/>
+          <text x="170" y="22" font-size="10" font-weight="700" fill="#1E293B" text-anchor="middle">Marked Green Bay Beside Main Gate</text>
+        </svg>
+      </div>
+
+      <div class="rules-box">
+        <div class="rules-title">⚠️ Parking Rules (Edinburgh Council)</div>
+        <ul class="rules-list">
+          <li>• Leave bike upright inside the green hatched bay.</li>
+          <li>• Do not block pavements or enter red cross-hatched zones.</li>
+          <li>• Ending a ride outside an approved bay incurs a £20 fine.</li>
+        </ul>
+      </div>
+
+      <button class="btn-teal" style="width:100%;" onclick="goToState('overview')">Confirm Bay &amp; View Full Route →</button>
+    </div>
+
+    <!-- Bottom Sheet 5: Turn-by-Turn Navigation -->
+    <div class="bottom-sheet" id="sheet-nav">
+      <div class="drag-handle"></div>
+      <div class="nav-metrics">
+        <div>
+          <div class="nav-eta" id="nav-eta">11 min ride</div>
+          <div class="nav-sub" id="nav-sub">+ 2 min walk to Nucleus • Bay P pinned</div>
+        </div>
+        <button class="close-mini" onclick="goToState('overview')">✕</button>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="goToState('bay')">View Bay Photo</button>
+        <button class="btn-teal" onclick="advanceNavigation()">Simulate Next Turn ▶</button>
+      </div>
+    </div>
+
+    <!-- Bottom Sheet 6: Compliant Arrival -->
+    <div class="bottom-sheet" id="sheet-arrived">
+      <div class="drag-handle"></div>
+      <div style="text-align:center; padding: 6px 0 12px;">
+        <div style="font-size:34px; margin-bottom:4px;">✅</div>
+        <div class="sheet-title" style="color:#15803D;">Inside Legal Parking Area</div>
+        <div class="sheet-sub" style="margin-top:4px;">KB Main Gate Bay (P) verified • 0% fine risk • 2 min walk to Nucleus</div>
+      </div>
+      <button class="btn-primary" style="width:100%; background:#16A34A;" onclick="alert('Ride ended safely at KB Main Gate Bay! Total time: 15 min (19 min faster than walking).'); goToState('home');">End Ride &amp; Lock Bike</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let navStep = 0;
+  let currentMode = 'bike';
+  const navWaypoints = [
+    { x: 140, y: 176, dist: "450 m", street: "Head south on Middle Meadow Walk", arrow: "↓", eta: "11 min ride", prog: "15%" },
+    { x: 175, y: 355, dist: "200 m", street: "Continue onto Mayfield Road", arrow: "↘", eta: "6 min ride", prog: "55%" },
+    { x: 210, y: 500, dist: "40 m", street: "Turn left into KB Main Gate Bay (P)", arrow: "↰", eta: "1 min ride", prog: "88%" },
+    { x: 232, y: 540, dist: "Arrived", street: "Inside KB Main Gate Parking Area ✓", arrow: "✓", eta: "0 min", prog: "100%" }
+  ];
+
+  function selectMode(mode) {
+    currentMode = mode;
+    document.getElementById('chip-bike').classList.toggle('selected', mode === 'bike');
+    document.getElementById('chip-walk').classList.toggle('selected', mode === 'walk');
+    document.getElementById('legs-bike').style.display = mode === 'bike' ? 'flex' : 'none';
+    document.getElementById('legs-walk').style.display = mode === 'walk' ? 'flex' : 'none';
+    document.getElementById('route-layer').setAttribute('opacity', mode === 'bike' ? '1' : '0');
+    document.getElementById('walk-only-layer').setAttribute('opacity', mode === 'walk' ? '1' : '0');
+    const cta = document.getElementById('planner-cta');
+    if (mode === 'walk') {
+      cta.textContent = 'Walk Only (No Bike)';
+      cta.onclick = () => alert('Walking route selected (34 min). No bike reserved.');
+    } else {
+      cta.textContent = 'Preview Full Route →';
+      cta.onclick = () => goToState('overview');
+    }
+  }
+
+  function hideAll() {
+    document.querySelectorAll('.bottom-sheet').forEach(el => el.classList.remove('show'));
+    document.getElementById('search-dropdown').classList.remove('show');
+    document.getElementById('nav-banner').classList.remove('show', 'arrived');
+    document.getElementById('overview-header').classList.remove('show');
+    document.getElementById('search-box').style.display = 'flex';
+    document.getElementById('map-legend').style.display = 'flex';
+    document.getElementById('overview-labels').setAttribute('opacity', '0');
+    document.getElementById('walk-only-layer').setAttribute('opacity', '0');
+    document.querySelectorAll('.step-item').forEach(el => el.classList.remove('active'));
+  }
+
+  function goToState(state) {
+    hideAll();
+    const map = document.getElementById('edinburgh-map');
+    const route = document.getElementById('route-layer');
+    const rider = document.getElementById('rider-marker');
+    const searchInput = document.getElementById('search-input');
+
+    if (state === 'home') {
+      document.getElementById('step-1').classList.add('active');
+      document.getElementById('sheet-home').classList.add('show');
+      searchInput.value = '';
+      route.setAttribute('opacity', '0');
+      rider.setAttribute('opacity', '0');
+      map.style.transform = 'scale(1) translate(0px, 0px)';
+    }
+    else if (state === 'search') {
+      document.getElementById('step-2').classList.add('active');
+      document.getElementById('search-dropdown').classList.add('show');
+      document.getElementById('sheet-home').classList.add('show');
+      searchInput.value = "King's Buildings";
+      route.setAttribute('opacity', '0');
+      rider.setAttribute('opacity', '0');
+      map.style.transform = 'scale(1) translate(0px, 0px)';
+    }
+    else if (state === 'planner') {
+      document.getElementById('step-3').classList.add('active');
+      document.getElementById('sheet-planner').classList.add('show');
+      searchInput.value = "King's Buildings (Nucleus)";
+      selectMode('bike');
+      rider.setAttribute('opacity', '0');
+      map.style.transform = 'scale(1.03) translate(0px, -18px)';
+    }
+    else if (state === 'overview') {
+      document.getElementById('step-4').classList.add('active');
+      document.getElementById('search-box').style.display = 'none';
+      document.getElementById('map-legend').style.display = 'none';
+      document.getElementById('overview-header').classList.add('show');
+      document.getElementById('sheet-overview').classList.add('show');
+      route.setAttribute('opacity', '1');
+      document.getElementById('overview-labels').setAttribute('opacity', '1');
+      rider.setAttribute('opacity', '0');
+      map.style.transform = 'scale(0.96) translate(0px, -22px)';
+    }
+    else if (state === 'bay') {
+      document.getElementById('step-5').classList.add('active');
+      document.getElementById('sheet-bay').classList.add('show');
+      searchInput.value = "KB Main Gate Bay (P)";
+      route.setAttribute('opacity', '1');
+      rider.setAttribute('opacity', '0');
+      map.style.transform = 'scale(1.75) translate(-22px, -145px)';
+    }
+    else if (state === 'nav') {
+      document.getElementById('step-6').classList.add('active');
+      document.getElementById('search-box').style.display = 'none';
+      document.getElementById('nav-banner').classList.add('show');
+      document.getElementById('sheet-nav').classList.add('show');
+      route.setAttribute('opacity', '1');
+      rider.setAttribute('opacity', '1');
+      navStep = 0;
+      updateNavUI();
+      map.style.transform = 'scale(1.18) translate(0px, -40px)';
+    }
+    else if (state === 'arrived') {
+      document.getElementById('step-7').classList.add('active');
+      document.getElementById('search-box').style.display = 'none';
+      const banner = document.getElementById('nav-banner');
+      banner.classList.add('show', 'arrived');
+      document.getElementById('nav-arrow').textContent = '✓';
+      document.getElementById('nav-dist').textContent = 'Arrived';
+      document.getElementById('nav-street').textContent = 'Inside KB Main Gate Parking Area';
+      document.getElementById('sheet-arrived').classList.add('show');
+      route.setAttribute('opacity', '1');
+      rider.setAttribute('opacity', '1');
+      rider.setAttribute('transform', 'translate(232, 540)');
+      map.style.transform = 'scale(1.8) translate(-22px, -145px)';
+    }
+  }
+
+  function updateNavUI() {
+    const wp = navWaypoints[navStep];
+    document.getElementById('rider-marker').setAttribute('transform', `translate(${wp.x}, ${wp.y})`);
+    document.getElementById('nav-arrow').textContent = wp.arrow;
+    document.getElementById('nav-dist').textContent = wp.dist;
+    document.getElementById('nav-street').textContent = wp.street;
+    document.getElementById('nav-eta').textContent = wp.eta;
+    document.getElementById('progress-fill').style.width = wp.prog;
+  }
+
+  function advanceNavigation() {
+    if (navStep < navWaypoints.length - 1) {
+      navStep++;
+      if (navStep === navWaypoints.length - 1) {
+        goToState('arrived');
+      } else {
+        updateNavUI();
+      }
+    }
+  }
+</script>
+</body>
+</html>
